@@ -1,4 +1,4 @@
-import sys
+import json
 
 def web_socket_do_extra_handshake(request):
     pass
@@ -38,6 +38,4 @@ def web_socket_transfer_data(request):
             return
 
 # vi:sts=4 sw=4 et
-
-
 
