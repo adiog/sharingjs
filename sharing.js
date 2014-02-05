@@ -55,7 +55,7 @@ SharingController.prototype = {
   },
 
   getArguments: function(jsonargs) {
-    return jsonargs.map(
+    ret = jsonargs.map(
       (function( el ) {
         if (el in this.sharedElements) {
           return 'this.sharedElements[' + el + ']';
@@ -63,15 +63,15 @@ SharingController.prototype = {
           return JSON.stringify(el);
         }
       }).bind(this)
-    ).join(',');
+    );
+    ret.push('host');
+    return ret.join(',');
   },
 
   ws_eval: function(owner, evaltext) {
-    var caller = owner;
+    host = (owner == this.owner);
     var foo = (function() {
-//      alert(evaltext);
       eval(evaltext);
-//      alert('eval succeeded');
     }).bind(this);
     return foo;
   },
@@ -112,8 +112,8 @@ SharingController.prototype = {
     evaltext = 'this.sharedElements["WSID"].FOO(ARGUMENTS);'
         .replace(/WSID/g, args.wsid)
         .replace(/FOO/g, args.foo)
-        .replace(/ARGUMENTS/g, this.getArguments(args.jsonargs));
-    this.ws_eval(args.owner, evaltext);
+        .replace(/ARGUMENTS/g, this.getArguments(args.args));
+    this.ws_eval(args.owner, evaltext)();
   },
 
   exec: function(foo) {
