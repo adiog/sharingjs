@@ -9,6 +9,8 @@ function SharingController(server, sessionid, silent){
   this.sharedElements = {};
   this.owner = this.generateId();
 
+  this.currentMessage = 0; 
+
   this.ws = new WebSocket('ws://' + server.host + ':' + server.port + '/' + server.alias);
   
   this.ws.onopen = (function() {
@@ -17,15 +19,7 @@ function SharingController(server, sessionid, silent){
   
   this.ws.onmessage = (function(e) {
     var msg = JSON.parse(e.data);
-    if (msg.type == 'new') {
-      this.do_new(msg.content);
-    }
-    if (msg.type == 'call') {
-      this.do_call(msg.content);
-    }
-    if (msg.type == 'exec') {
-      this.do_exec(msg.content);
-    }
+    this.process(msg);
   }).bind(this);
 
   this.ws.onclose = function() {
@@ -35,7 +29,43 @@ function SharingController(server, sessionid, silent){
   };
 };
 
+var sharingControllerTimeout = 10000;
+var sharingControllerInterval = 100;
+
 SharingController.prototype = {
+  process: function(msg, cnt) {
+    var cnt = cnt || 0;
+    if (msg.mid != this.currentMessage) {
+      setTimeout( 
+        (function(msg, that, cnt) {
+           var msg = msg;
+           var that = that;
+           var foo = function() {
+             if (cnt < (sharingControllerTimeout / sharingControllerInterval)) {
+               that.process(msg, cnt);
+             } else {
+               alert(tr("Timeout: Server has not sent valid message."));
+             }
+           };
+           return foo;
+         })(msg, this, cnt+1),
+        sharingControllerInterval);
+      return;
+    }
+    if (msg.content.owner != this.owner) {
+      if (msg.type == 'new') {
+        this.do_new(msg.content);
+      }
+      if (msg.type == 'call') {
+        this.do_call(msg.content);
+      }
+      if (msg.type == 'exec') {
+        this.do_exec(msg.content);
+      }
+    }
+    this.currentMessage = this.currentMessage + 1;
+  },
+
   jsonsend: function(msgtype, args) {
     args.owner = this.owner;
     this.ws.send(JSON.stringify({"type": msgtype, "content": args}));
@@ -64,13 +94,13 @@ SharingController.prototype = {
         }
       }).bind(this)
     );
-    ret.push('host');
+    ret.push('guest');
     ret.push('owner');
     return ret.join(',');
   },
 
   ws_eval: function(owner, evaltext) {
-    host = (owner == this.owner);
+    guest = (owner != this.owner);
     var foo = (function() {
       eval(evaltext);
     }).bind(this);

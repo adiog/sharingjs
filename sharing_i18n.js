@@ -5,7 +5,9 @@ var dictionaries = {
     "WebSocket is not supported by your browser.":
       "Protokół WebSocket nie jest wspierany przez twoją przeglądarkę.",
     "Connection to server closed.":
-      "Połączenie z serwerem zostało zamknięte."
+      "Połączenie z serwerem zostało zamknięte.",
+    "Timeout: Server has not sent valid message.":
+      "Przekroczenie czasu oczekiwania: Serwer nie wysłał poprawnej wiadomości."
   }
 };
 
