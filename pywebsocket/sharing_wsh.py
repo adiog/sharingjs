@@ -27,15 +27,22 @@ def web_socket_transfer_data(request):
     while True:
         try: 
             line = request.ws_stream.receive_message()
-            message[sid].append(line)
+            # >> CUT HERE my own workaround for critical section problem
+            data = json.loads(line)
+            message[sid].append(data)
+            mid = message[sid].index(data)
+            data['mid'] = mid
+            line = json.dumps(data)
+            message[sid][mid] = line
+            # << CUT HERE
             for socket in sockets[sid]:
-                if socket != request:
-                    socket.ws_stream.send_message(line, binary=False)
+                socket.ws_stream.send_message(line, binary=False)
         except:
             sockets[sid].remove(request)
             if sockets[sid] == []:
                 sockets.pop(sid)
                 message.pop(sid)
+                print "Message queue has been deleted."
             print 'This should have never happened!'
             return
 
