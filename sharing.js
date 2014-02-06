@@ -17,8 +17,8 @@ function SharingController(server, sessionid, silent){
   
   this.ws.onmessage = (function(e) {
     var msg = JSON.parse(e.data);
-    if (msg.type == 'create') {
-      this.do_create(msg.content);
+    if (msg.type == 'new') {
+      this.do_new(msg.content);
     }
     if (msg.type == 'call') {
       this.do_call(msg.content);
@@ -65,6 +65,7 @@ SharingController.prototype = {
       }).bind(this)
     );
     ret.push('host');
+    ret.push('owner');
     return ret.join(',');
   },
 

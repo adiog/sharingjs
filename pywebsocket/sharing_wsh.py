@@ -27,6 +27,7 @@ def web_socket_transfer_data(request):
     while True:
         try: 
             line = request.ws_stream.receive_message()
+            message[sid].append(line)
             for socket in sockets[sid]:
                 if socket != request:
                     socket.ws_stream.send_message(line, binary=False)
@@ -35,6 +36,7 @@ def web_socket_transfer_data(request):
             if sockets[sid] == []:
                 sockets.pop(sid)
                 message.pop(sid)
+            print 'This should have never happened!'
             return
 
 # vi:sts=4 sw=4 et
