@@ -9,7 +9,7 @@ function SharingController(server, sessionid, silent){
   this.sharedElements = {};
   this.owner = this.generateId();
 
-  this.currentMessage = 0; 
+  this.nextMessage = 0; 
 
   this.ws = new WebSocket('ws://' + server.host + ':' + server.port + '/' + server.alias);
   
@@ -35,7 +35,7 @@ var sharingControllerInterval = 100;
 SharingController.prototype = {
   process: function(msg, cnt) {
     var cnt = cnt || 0;
-    if (msg.mid != this.currentMessage) {
+    if (msg.mid != this.nextMessage) {
       setTimeout( 
         (function(msg, that, cnt) {
            var msg = msg;
@@ -63,7 +63,7 @@ SharingController.prototype = {
         this.do_exec(msg.content);
       }
     }
-    this.currentMessage = this.currentMessage + 1;
+    this.nextMessage = this.nextMessage + 1;
   },
 
   jsonsend: function(msgtype, args) {
