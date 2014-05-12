@@ -1,48 +1,86 @@
 import json
+import threading
 
 def web_socket_do_extra_handshake(request):
     pass
 
-sockets = {}
-message = {}
-def web_socket_transfer_data(request):
-    global sockets
-    global message
-    line = request.ws_stream.receive_message()
-    data = json.loads(line)
-    if data['type'] == 'register':
+
+class WebSocketSessionRoomController(object):
+    session = {}
+    session_mutex = threading.Semaphore()
+
+    @classmethod
+    def new_connection(cls, request):
+        line = request.ws_stream.receive_message()
+        data = json.loads(line)
+        if data['type'] != 'register':
+            raise "Protocol error."
         sid = data['sessionid']
         print 'New connection for ' + sid
-        if sid not in sockets:
-            sockets[sid] = []
-        sockets[sid].append(request)
-        if sid not in message:
-            message[sid] = []
-        else:
-            for m in message[sid]:
-                request.ws_stream.send_message(m, binary=False)
-    else:
+
+        with cls.session_mutex:
+            if not cls.session.has_key(sid):
+                cls.session[sid] = WebSocketSessionRoomController(sid, request)
+            else:
+                cls.session[sid].flush(request)
+        return cls.session[sid]
+
+    @classmethod
+    def del_connection(cls, sid):
+        del cls.session[sid]
+
+    def drop(self, request):
+        self.sockets.remove(request)
+        return (self.sid, not self.sockets)
+
+    def __init__(self, sid, request):
+        self.sockets = [request]
+        self.message = []
+        self.mutex = threading.Semaphore()
+        self.sid = sid
+
+    def store_and_enum(self, line):
+        data = json.loads(line)
+        with self.mutex:
+            mid = len(self.message)
+            data['mid'] = mid
+            line_enumerated = json.dumps(data)
+            self.message.append(line_enumerated)
+        return line_enumerated
+
+    def broadcast(self, line_enumerated):
+        for socket in self.sockets:
+            socket.ws_stream.send_message(line_enumerated, binary=False)
+            print "sending message" + line_enumerated
+
+    def flush(self, request):
+        with self.mutex:
+            for msg in self.message:
+                request.ws_stream.send_message(msg, binary=False)
+                print "sending message" + msg
+
+    def get(self, request):
+        line = request.ws_stream.receive_message()
+        line_enumerated = self.store_and_enum(line)
+        self.broadcast(line_enumerated)
+
+
+def web_socket_transfer_data(request):
+    try:
+        session = WebSocketSessionRoomController.new_connection(request)
+    except:
         print 'This should have never happened!'
         return
+
     while True:
-        try: 
-            line = request.ws_stream.receive_message()
-            # >> CUT HERE my own workaround for critical section problem
-            data = json.loads(line)
-            message[sid].append(data)
-            mid = message[sid].index(data)
-            data['mid'] = mid
-            line = json.dumps(data)
-            message[sid][mid] = line
-            # << CUT HERE
-            for socket in sockets[sid]:
-                socket.ws_stream.send_message(line, binary=False)
+        try:
+            session.get(request)
         except:
-            sockets[sid].remove(request)
-            if sockets[sid] == []:
-                sockets.pop(sid)
-                message.pop(sid)
-                print "Message queue has been deleted."
+            with WebSocketSessionRoomController.session_mutex:
+                sid, drop = session.drop(request)
+                if drop:
+                    WebSocketSessionRoomController.del_connection(sid)
+                    print "Message queue has been deleted."
             print 'This should have never happened!'
             return
 

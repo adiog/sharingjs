@@ -38,9 +38,9 @@
       ChessController.prototype = {
         do_callbackOnDrop: function(fen, guest) {
           this.board.position(fen);
-          if (guest) {
-            alert('Opponent made a move!');
-          }
+//          if (guest) {
+//            alert('Opponent made a move!');
+//          }
         },
 
         callbackOnDrop: function(source, target, piece, newPos, oldPos, orientation) {
