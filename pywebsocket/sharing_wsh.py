@@ -22,6 +22,7 @@ class WebSocketSessionRoomController(object):
             if not cls.session.has_key(sid):
                 cls.session[sid] = WebSocketSessionRoomController(sid, request)
             else:
+                cls.session[sid].sockets.append(request)
                 cls.session[sid].flush(request)
         return cls.session[sid]
 
@@ -30,6 +31,7 @@ class WebSocketSessionRoomController(object):
         del cls.session[sid]
 
     def drop(self, request):
+        print self.sockets
         self.sockets.remove(request)
         return (self.sid, not self.sockets)
 
@@ -51,13 +53,11 @@ class WebSocketSessionRoomController(object):
     def broadcast(self, line_enumerated):
         for socket in self.sockets:
             socket.ws_stream.send_message(line_enumerated, binary=False)
-            print "sending message" + line_enumerated
 
     def flush(self, request):
         with self.mutex:
             for msg in self.message:
                 request.ws_stream.send_message(msg, binary=False)
-                print "sending message" + msg
 
     def get(self, request):
         line = request.ws_stream.receive_message()
